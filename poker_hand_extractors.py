@@ -30,7 +30,7 @@ def extract_board(text, street):
 
 def extract_actions(text, street):
     # e.g. street = 'PREFLOP' for pre-flop actions
-    pattern = f"\*\*\* {street} \*\*\*"
+    pattern = f"*** {street} ***"
     start = text.find(pattern)
     if start == -1:
         return []
