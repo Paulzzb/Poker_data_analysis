@@ -1,6 +1,7 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
 
 def vpip_rate(df):
     return df["hero_vpip"].sum() / len(df)
@@ -17,35 +18,60 @@ def saw_flop_rate(df):
     return None
 
 def extract_hero_investment(row):
-    # 初始化投资总额为0
-    total = 0.0
-    # 遍历四个阶段
-    for street in ["preflop_actions", "flop_actions", "turn_actions", "river_actions"]:
-        # 获取当前阶段的动作列表
+    total_invest = 0.0
+
+    for street in ["parsed_preflop", "parsed_flop", "parsed_turn", "parsed_river"]:
         actions = row.get(street, [])
-        # 遍历动作列表
+        street_invest = 0.0
+        returned = 0.0
+
         for act in actions:
-            # 匹配动作中的投资信息
-            m = re.match(r"Hero: (bets|calls|raises) \$(\d+(\.\d+)?)", act)
-            if m:
-                # 如果匹配成功，将投资金额转换为浮点数并累加到总投资额中
-                total += float(m.group(2))
-            else:
-                # 如果匹配失败，则匹配其他类型的投资信息
-                m2 = re.match(r"Hero: raises \$\d+(\.\d+)? to \$(\d+(\.\d+)?)", act)
-                if m2:
-                    # 如果匹配成功，将投资金额转换为浮点数并累加到总投资额中
-                    total += float(m2.group(2))
-    # 返回总投资额
-    return total
+            if act.get("player") == "Hero":
+                if act.get("action") in {"call", "raise"}:
+                    if "to" in act:
+                        street_invest = float(act["to"])  # 覆盖为最新一次 raise 的 to 值
+                    elif "amount" in act:
+                        street_invest = float(act["amount"])
+                elif act.get("action") == "uncalled_bet_returned":
+                    returned += float(act["amount"])
+
+        total_invest += max(street_invest - returned, 0.0)
+        print(street, street_invest, returned, total_invest)
+        1
+
+    return total_invest
+
+
+
+# def extract_hero_investment(row):
+#     total = 0.0
+#     for street in ["parsed_preflop", "parsed_flop", "parsed_turn", "parsed_river"]:
+#         actions = row.get(street, [])
+#         for act in actions:
+#             if act.get("player") != "Hero":
+#                 continue
+#             if act.get("action") in {"calls"}:
+#                 # total += float(act["to"])
+#                 if "to" in act:
+#                     total += float(act["to"])
+#                 elif "amount" in act:
+#                     total += float(act["amount"])
+#             if act.get("action") in {"raise"}:
+#                 if "to" in act:
+#                     total += float(act["to"])
+#                 elif "amount" in act:
+#                     total += float(act["amount"])
+#     total
+#     return total
+
 
 def extract_hero_return(row):
     # 找到 SHOWDOWN 中 Hero 所获金额
-    for line in row.get("showdown", []):
-        m = re.match(r"Hero collected \$(\d+(\.\d+)?) from pot", line)
-        if m:
-            return float(m.group(1))
-    return 0.0
+    # for line in row.get("showdown", []):
+    #     m = re.match(r"Hero collected \$(\d+(\.\d+)?) from pot", line)
+    #     if m:
+    #         return float(m.group(1))
+    return row.get("hero_collected") 
 
 def calculate_hero_profit(df):
     # 复制数据框
