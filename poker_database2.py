@@ -3,8 +3,14 @@ import os
 import re
 from pokerhand_class import PokerHand
 from poker_hand_extractors import (
-    extract_hand_id, extract_hand_time, extract_players, extract_all_hole_cards,
-    extract_board, extract_actions, extract_showdown, extract_summary
+    extract_hand_id, extract_players, extract_all_hole_cards,
+    extract_board, extract_actions, extract_showdown, extract_summary,
+    extract_post_blinds, extract_hand_time, 
+)
+
+from dataframe_features import(
+    extract_profit_by_players, extract_winflag, 
+
 )
 
 class PokerDatabase:
@@ -24,7 +30,7 @@ class PokerDatabase:
                 hand_id=extract_hand_id(block),
                 hand_time=extract_hand_time(block),
                 players=extract_players(block),
-                post_blinds=extract_post_blinds(text),
+                post_blinds=extract_post_blinds(block),
                 hero_cards=extract_all_hole_cards(block).get("Hero", []),
                 all_hole_cards=extract_all_hole_cards(block),
                 preflop_actions=extract_actions(block, "HOLE CARDS"),
@@ -76,7 +82,6 @@ class PokerDatabase:
             showdown_players = []
             
             for line in h.parsed_river:
-                1
                 showdown_players = [
                     a["player"] for a in h.parsed_river
                     if a.get("action") == "show"
@@ -91,31 +96,35 @@ class PokerDatabase:
 
             row = {
                 "hand_id": h.hand_id,
-                "hero_cards": " ".join(h.hero_cards),
+                "hand_time": h.hand_time,
+                # Board information
                 "flop": " ".join(h.flop_board),
                 "turn": " ".join(h.turn_board),
                 "river": " ".join(h.river_board),
-
-                # 结构化字段（推荐用于分析）
+                # Actions 
+                "post_blinds": h.post_blinds,
                 "parsed_preflop": getattr(h, "parsed_preflop", []),
                 "parsed_flop": getattr(h, "parsed_flop", []),
                 "parsed_turn": getattr(h, "parsed_turn", []),
                 "parsed_river": getattr(h, "parsed_river", []),
-
-                # 可视化展示用（字符串版）
+                # Readable actions
                 "preflop_actions_str": " | ".join(format_action(a) for a in getattr(h, "parsed_preflop", [])),
                 "flop_actions_str": " | ".join(format_action(a) for a in getattr(h, "parsed_flop", [])),
                 "turn_actions_str": " | ".join(format_action(a) for a in getattr(h, "parsed_turn", [])),
                 "river_actions_str": " | ".join(format_action(a) for a in getattr(h, "parsed_river", [])),
+                # Player information
+                "players": h.players,
+                "players_profit": extract_profit_by_players(h),
+                "players_win_flag": extract_winflag(h),
+                "players_hands": " ", 
+
+
+
 
                 # 统计字段
                 "total_pot": h.summary.get("total_pot", 0.0),
                 "rake": h.summary.get("rake", 0.0),
                 "jackpot": h.summary.get("jackpot", 0.0),
-                "hero_vpip": int(any(a.get("player") == "Hero" and a.get("action") in ("call", "bet", "raise")
-                                     for a in getattr(h, "parsed_preflop", []))),
-                "hero_pfr": int(any(a.get("player") == "Hero" and a.get("action") == "raise"
-                                    for a in getattr(h, "parsed_preflop", []))),
                 "winner": "Hero" if who_win == ["Hero"] else "Split" if "Hero" in who_win else "Other",
                 "who_win": who_win,
                 "hero_collected": collected_total if who_win == ["Hero"] else (

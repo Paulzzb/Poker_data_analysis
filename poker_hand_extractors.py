@@ -1,9 +1,16 @@
 
 import re
+from datetime import datetime
 
 def extract_hand_id(text):
     match = re.search(r"Poker Hand #(\w+):", text)
     return match.group(1) if match else None
+
+def extract_hand_time(text):
+    match = re.search(r"\- (\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})", text)
+    if match:
+        return datetime.strptime(match.group(1), "%Y/%m/%d %H:%M:%S")
+    return None
 
 def extract_players(text):
     players = []
@@ -14,6 +21,18 @@ def extract_players(text):
                 seat, name, chips = m.groups()
                 players.append({"seat": int(seat), "name": name, "chips": float(chips)})
     return players
+
+
+def extract_post_blinds(text):
+    blinds = []
+    pattern = re.compile(r"(\w+): posts (small|big) blind \$(\d+(?:\.\d+)?)")
+    for match in pattern.finditer(text):
+        blinds.append({
+            "player": match.group(1),
+            "type": f"{match.group(2)}_blind",
+            "amount": float(match.group(3))
+        })
+    return blinds
 
 def extract_all_hole_cards(text):
     dealt_lines = re.findall(r"Dealt to (\S+) \[(.*?)\]", text)

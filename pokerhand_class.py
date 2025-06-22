@@ -4,7 +4,9 @@ import re
 class PokerHand:
     def __init__(self,
                  hand_id=None,
+                 hand_time=None,
                  players=None,
+                 post_blinds=None,
                  hero_cards=None,
                  all_hole_cards=None,
                  preflop_actions=None,
@@ -62,19 +64,13 @@ class PokerHand:
 
             ]
 
-            # patterns = [
-            #     (r"(\w+): checks", lambda m: {'player': m.group(1), 'action': 'check'}),
-            #     (r"(\w+): folds", lambda m: {'player': m.group(1), 'action': 'fold'}),
-            #     (r"(\w+): calls \$(\d+\.?\d+)", lambda m: {'player': m.group(1), 'action': 'call', 'amount': float(m.group(2))}),
-            #     # (r"(\w+): bets \$(\d+\.?\d+)", lambda m: {'player': m.group(1), 'action': 'bet', 'amount': float(m.group(2))}),
-            #     (r"(\w+): raises \$(\d+\.?\d+) to \$(\d+\.?\d+)",
-            #      lambda m: {'player': m.group(1), 'action': 'raise', 'amount': float(m.group(2)), 'to': float(m.group(3))})
-            # ]
             for pattern, parser in patterns:
                 m = re.match(pattern, line.strip())
                 if m:
-                    print(m)
+                    # print(m)
                     return parser(m)
             return None
 
         return [parsed for line in action_lines if (parsed := parse_action_line(line))]
+        # End of parse_street_action
+    
